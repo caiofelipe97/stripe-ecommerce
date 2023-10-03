@@ -1,14 +1,22 @@
 import { GetStaticProps } from "next";
+import { useShoppingCart } from "use-shopping-cart";
 import Head from "next/head";
 import { useKeenSlider } from "keen-slider/react";
 import Image from "next/image";
 
 import { stripe } from "@/lib/stripe";
-import { HomeContainer, Product } from "@/styles/pages/home";
+import {
+  AddToCartButton,
+  HomeContainer,
+  Product,
+  ProductInfoContainer,
+} from "@/styles/pages/home";
 
 import "keen-slider/keen-slider.min.css";
 import Stripe from "stripe";
 import Link from "next/link";
+import { Handbag } from "@phosphor-icons/react";
+import { theme } from "@/styles";
 
 interface HomeProps {
   products: {
@@ -16,16 +24,36 @@ interface HomeProps {
     name: string;
     imageUrl: string;
     price: string;
+    priceData: any;
+    priceAmount: number;
+    currency: string;
   }[];
 }
 
 export default function Home({ products }: HomeProps) {
+  const { addItem, cartDetails } = useShoppingCart();
   const [sliderRef] = useKeenSlider({
     slides: {
       perView: 3,
       spacing: 48,
     },
   });
+
+  const handleAddItemToCart = (product: any) => {
+    if (!cartDetails[product.id])
+      addItem({
+        name: product.name,
+        id: product.id,
+        price: product.priceAmount,
+        currency: product.currency,
+        image: product.imageUrl,
+        price_data: product.priceData,
+        product_data: product,
+      });
+    else {
+      alert("Produto já está no carrinho!");
+    }
+  };
 
   return (
     <>
@@ -39,8 +67,24 @@ export default function Home({ products }: HomeProps) {
               <Product className="keen-slider__slide">
                 <Image src={product.imageUrl} width={520} height={520} alt="" />
                 <footer>
-                  <strong>{product.name}</strong>
-                  <span>{product.price}</span>
+                  <ProductInfoContainer>
+                    <strong>{product.name}</strong>
+                    <span>{product.price}</span>
+                  </ProductInfoContainer>
+
+                  <AddToCartButton
+                    onClick={(event) => {
+                      event.preventDefault();
+
+                      handleAddItemToCart(product);
+                    }}
+                  >
+                    <Handbag
+                      color={theme.colors.white.value}
+                      size={24}
+                      strokeWidth={5}
+                    />
+                  </AddToCartButton>
                 </footer>
               </Product>
             </Link>
@@ -66,6 +110,9 @@ export const getStaticProps: GetStaticProps = async () => {
         style: "currency",
         currency: "BRL",
       }).format((price.unit_amount ?? 0) / 100),
+      priceData: price,
+      priceAmount: price.unit_amount,
+      currency: price.currency,
     };
   });
   return {
